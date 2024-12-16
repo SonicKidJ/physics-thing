@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Click the Box Game</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <h1>Click the Box Game</h1>
+        <p id="score">Score: 0</p>
+        <div id="game-box"></div>
+        <button id="start-button">Start Game</button>
+        <button id="pause-button">Pause</button>
+    </div>
+
+    <div id="pause-screen" style="display: none;">
+        <h2>Game Paused</h2>
+        <p>Choose Difficulty:</p>
+        <button class="difficulty-button" data-difficulty="easy">Easy</button>
+        <button class="difficulty-button" data-difficulty="normal">Normal</button>
+        <button class="difficulty-button" data-difficulty="hard">Hard</button>
+        <button class="difficulty-button" data-difficulty="extreme">Extreme</button>
+        <button id="resume-button">Resume</button>
+        <button id="restart-button">Restart</button>
+    </div>
+
+    <div id="lose-screen" style="display: none;">
+        <h2>You Lose!</h2>
+        <p>You missed the box 10 times. Try again!</p>
+        <button id="restart-lose-button">Restart Game</button>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
