@@ -1,0 +1,217 @@
+
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tower of Falling Blocks with Physics</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="physicsCanvas"></canvas>
+
+    <script>
+        // Get canvas and context
+        const canvas = document.getElementById("physicsCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Set canvas size to fill window
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Ball properties
+        let ball = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 30,
+            dx: 4, // Horizontal speed
+            dy: 0, // Vertical speed
+            gravity: 0.5, // Gravity effect
+            friction: 0.98, // Friction (slows down on surfaces)
+            bounce: 0.7, // Bounce factor
+            isDragging: false, // Check if the ball is being dragged
+            dragOffsetX: 0, // Offset for dragging
+            dragOffsetY: 0 // Offset for dragging
+        };
+
+        // Create a tower of tall blocks (each block has a tall height)
+        const blockWidth = 50;  // Narrow width for each block
+        const blockHeight = 200; // Tall height for each block
+        let blocks = [];
+        let rows = 4; // Number of rows in the tower (adjustable)
+        let columns = 3; // Number of blocks per row (adjustable)
+
+        // Initialize blocks and their physics
+        for (let i = 0; i < rows; i++) {
+            for (let j = 0; j < columns; j++) {
+                blocks.push({
+                    x: 200 + j * blockWidth, // Position blocks horizontally
+                    y: canvas.height - (i + 1) * blockHeight, // Stack blocks vertically
+                    width: blockWidth,
+                    height: blockHeight,
+                    dx: 0, // Horizontal velocity
+                    dy: 0, // Vertical velocity
+                    rotation: 0, // Initial rotation
+                    isFalling: false // Whether the block is falling over
+                });
+            }
+        }
+
+        // Mouse event listeners for dragging
+        canvas.addEventListener('mousedown', (e) => {
+            const mouseX = e.clientX;
+            const mouseY = e.clientY;
+
+            // Check if the mouse is inside the ball
+            const distance = Math.sqrt((mouseX - ball.x) ** 2 + (mouseY - ball.y) ** 2);
+            if (distance < ball.radius) {
+                ball.isDragging = true;
+                ball.dragOffsetX = mouseX - ball.x;
+                ball.dragOffsetY = mouseY - ball.y;
+                ball.dx = 0; // Stop ball movement when dragging
+                ball.dy = 0;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (ball.isDragging) {
+                ball.x = e.clientX - ball.dragOffsetX;
+                ball.y = e.clientY - ball.dragOffsetY;
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            ball.isDragging = false; // Stop dragging when the mouse is released
+        });
+
+        // Collision detection for the ball and blocks
+        function checkCollision(ball, block) {
+            // Check for AABB collision (Axis-Aligned Bounding Box) between the ball and block
+            if (
+                ball.x + ball.radius > block.x &&
+                ball.x - ball.radius < block.x + block.width &&
+                ball.y + ball.radius > block.y &&
+                ball.y - ball.radius < block.y + block.height
+            ) {
+                // Apply force to the block when the ball hits it
+                let dx = ball.x - block.x - block.width / 2; // X difference between ball and block center
+                let dy = ball.y - block.y - block.height / 2; // Y difference between ball and block center
+                let distance = Math.sqrt(dx * dx + dy * dy); // Distance between ball center and block center
+                let overlap = ball.radius + Math.max(block.width, block.height) / 2 - distance;
+
+                if (overlap > 0) {
+                    // Apply a force to the block to make it fall
+                    let forceX = dx / distance * overlap * 0.5;
+                    let forceY = dy / distance * overlap * 0.5;
+
+                    block.dx += forceX;  // Apply force to the block in X
+                    block.dy += forceY;  // Apply force to the block in Y
+                    block.rotation += forceX * 0.05;  // Apply a small rotational force
+
+                    // Make the block fall
+                    block.isFalling = true;
+                }
+            }
+        }
+
+        // Main game loop
+        function update() {
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (!ball.isDragging) {
+                // Apply gravity to the ball
+                ball.dy += ball.gravity;
+
+                // Move the ball
+                ball.x += ball.dx;
+                ball.y += ball.dy;
+
+                // Collision with the floor (bottom of the canvas)
+                if (ball.y + ball.radius > canvas.height) {
+                    ball.y = canvas.height - ball.radius;
+                    ball.dy *= -ball.bounce; // Reverse and reduce speed (bounce)
+                    ball.dx *= ball.friction; // Apply friction to horizontal speed
+                }
+
+                // Collision with the walls (left and right)
+                if (ball.x - ball.radius < 0 || ball.x + ball.radius > canvas.width) {
+                    ball.dx *= -1; // Reverse the horizontal direction
+                }
+            }
+
+            // Draw the ball
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = "blue";
+            ctx.fill();
+            ctx.closePath();
+
+            // Draw and update blocks (stacked like towers)
+            blocks.forEach((block) => {
+                // Apply gravity to the block
+                if (block.isFalling) {
+                    block.dy += ball.gravity;  // Make the block fall due to gravity
+                }
+
+                // Move the block based on its velocity
+                block.x += block.dx;
+                block.y += block.dy;
+
+                // Apply friction to blocks (slows down movement)
+                block.dx *= ball.friction;
+                block.dy *= ball.friction;
+
+                // Collision with the floor (bottom of the canvas)
+                if (block.y + block.height > canvas.height) {
+                    block.y = canvas.height - block.height; // Prevent block from falling through
+                    block.dy *= -0.6; // Apply bounce
+                }
+
+                // Collision with the top of the canvas
+                if (block.y < 0) {
+                    block.y = 0;
+                    block.dy *= -0.5; // Bounce off the top
+                }
+
+                // Collision with the walls (left and right)
+                if (block.x < 0) {
+                    block.x = 0;
+                    block.dx *= -0.5; // Bounce off the left wall
+                } else if (block.x + block.width > canvas.width) {
+                    block.x = canvas.width - block.width;
+                    block.dx *= -0.5; // Bounce off the right wall
+                }
+
+                // Draw the block (with rotation if it's falling)
+                ctx.save(); // Save the current state
+                ctx.translate(block.x + block.width / 2, block.y + block.height / 2); // Move origin to center of block
+                ctx.rotate(block.rotation); // Apply rotation
+                ctx.fillStyle = "red";
+                ctx.fillRect(-block.width / 2, -block.height / 2, block.width, block.height); // Draw the block
+                ctx.restore(); // Restore the state to original
+            });
+
+            // Check for collisions with each block
+            blocks.forEach((block) => {
+                checkCollision(ball, block);
+            });
+
+            // Request next frame (smooth animation)
+            requestAnimationFrame(update);
+        }
+
+        // Start the simulation
+        update();
+    </script>
+</body>
+</html>
